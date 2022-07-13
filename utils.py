@@ -1,14 +1,13 @@
 from transformers import GPT2Tokenizer, TFGPT2LMHeadModel
 import tensorflow as tf
-
-VOCAB_SIZE: int = 50280
+import config
 
 
 def get_tokenizer():
-    return GPT2Tokenizer.from_pretrained("tokenizer/")
+    return GPT2Tokenizer.from_pretrained(config.tokenizer_dir)
 
 
-def get_model(vocab_size: int = VOCAB_SIZE, model_weights_path='model/final_weights'):
+def get_model(vocab_size: int = config.VOCAB_SIZE, model_weights_path=config.model_weights_path):
     model = TFGPT2LMHeadModel.from_pretrained("distilgpt2")
     model.resize_token_embeddings(vocab_size)
     latest = tf.train.latest_checkpoint(model_weights_path)

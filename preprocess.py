@@ -1,28 +1,22 @@
 import string
-
-null_punct = str.maketrans('', '', string.punctuation)
+import os
+from pathlib import Path
+import json
+import operator
+from tqdm import tqdm
+from functools import reduce
+import pickle
+import config
 
 
 def clean_data(list):
+    null_punct = str.maketrans('', '', string.punctuation)
     for desc in list:
         desc = [word.lower() for word in desc.split()]
         desc = [w.translate(null_punct) for w in desc]
         desc = [word for word in desc if word.isalpha()]
         desc = [word for word in desc if len(word) > 1]
         yield ' '.join(desc)
-
-
-import os
-from pathlib import Path
-import json
-from tqdm import tqdm
-from functools import reduce
-from random import random
-
-isascii_word = lambda w: len(w) == len(w.encode())
-isascii_list = lambda l: reduce(lambda rez, word: rez & True if isascii_word(word) else False & rez, l, True)
-dirname = os.path.join('ImgFlip575K_Dataset', 'dataset', 'memes')
-lookup = dict()
 
 
 def print_iterator(it):
@@ -32,6 +26,10 @@ def print_iterator(it):
 
 
 def load_memes(start=0, end=100):
+    isascii_word = lambda w: len(w) == len(w.encode())
+    isascii_list = lambda l: reduce(lambda rez, word: rez & True if isascii_word(word) else False & rez, l, True)
+    dirname = config.meme_dir
+    lookup = dict()
     i = 0
     for filename in tqdm(os.listdir(dirname)):  # foreach json file in memes
         i += 1
@@ -46,8 +44,32 @@ def load_memes(start=0, end=100):
                 words = ' | '.join(clean_data(meme['boxes']))
                 if isascii_list(words):
                     lookup[meme_name].append(words)
+    return lookup
 
 
-load_memes()
-print(f'Memes loaded: {len(lookup)}')  # 99 memes, in the latest dataset 100
-print(f'Meme example: {lookup[list(lookup)[0]][0]}')  # when you off the dope | and you think you a bird
+def reduce_data(lookup):
+    train_descriptions = {k: v for k, v in lookup.items()}
+    b = {}
+    a = []
+    for key in train_descriptions.keys():
+        if train_descriptions[key][0].count('|') == 1:
+            a.append(key)
+    for key in a:
+        b[key] = len(train_descriptions[key])
+    d = sorted(b.items(), key=operator.itemgetter(1), reverse=True)
+    keyList = []
+    for val in d:
+        keyList.append(val[0])
+    for key in list(train_descriptions.keys()):
+        if key not in keyList:
+            del train_descriptions[key]
+    with open(config.train_path, "wb") as fp:
+        pickle.dump(train_descriptions, fp)
+    return train_descriptions
+
+
+def run():
+    lookup = load_memes()
+    print(f'Memes loaded: {len(lookup)}')  # 99 memes, in the latest dataset 100
+    print(f'Meme example: {lookup[list(lookup)[0]][0]}')  # when you off the dope | and you think you a bird
+    return reduce_data(lookup)
