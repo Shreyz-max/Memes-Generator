@@ -7,6 +7,7 @@ import config
 
 
 def training():
+    # loads the saved data
     with open(config.captions_path, "rb") as f:
         captions = pickle.load(f)
         captions = tf.convert_to_tensor(captions)
@@ -16,6 +17,7 @@ def training():
         labels = tf.convert_to_tensor(labels)
 
     start_time = datetime.now().strftime("%Y%m%d-%H%M%S")
+    # creates checkpoint folder
     checkpoint_path_base = os.path.join(config.checkpoint_dir,
                                         f"training_{start_time}")
     trial_checkpoint_path = f"{checkpoint_path_base}/cp.ckpt"
@@ -24,11 +26,12 @@ def training():
     optimizer = tf.keras.optimizers.Adam(learning_rate=config.learning_rate)
     loss = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
 
+    # compiles model
     model.compile(optimizer=optimizer,
                   loss=[loss],
                   metrics=["sparse_categorical_accuracy"])
 
-    trial_checkpoint_path = f"cp.ckpt"
+    # creates a callback
     cp_callback = tf.keras.callbacks.ModelCheckpoint(
         trial_checkpoint_path,
         save_weights_only=True,
@@ -39,7 +42,7 @@ def training():
     model.fit(x=captions, y=labels, epochs=config.epochs, batch_size=config.batch_size,
               callbacks=[cp_callback],
               validation_split=config.validation_split)
-
+    #saving the final model
     model.save(f"{checkpoint_path_base}/final_model")
     model.save_weights(f"{checkpoint_path_base}/final_weights")
 
